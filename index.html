@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Exam Simulator</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #0d1117;
+            --bg-surface: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-green: #3fb950;
+            --accent-red: #ff7b72;
+            --bg-green-muted: rgba(63, 185, 80, 0.1);
+            --bg-red-muted: rgba(255, 123, 114, 0.1);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        /* --- New Toolbelt Layout --- */
+        .toolbelt {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 40px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        
+        .progress-wrapper {
+            flex-grow: 1; /* Takes up all available middle space */
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .progress-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            min-width: 45px;
+        }
+        .progress-bar-bg {
+    flex-grow: 1;
+    background-color: var(--border-color);
+    height: 8px;
+    border-radius: 4px;
+    /* Removed overflow: hidden so the circle isn't cut off */
+    cursor: pointer;
+    position: relative; 
+}
+
+.progress-bar-fill {
+    background-color: #58a6ff;
+    height: 100%;
+    width: 0%;
+    border-radius: 4px; /* Added so the blue bar stays rounded */
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; /* Added to anchor the circle */
+}
+
+/* This creates the scrubber circle */
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: -6px; /* Puts the center of the circle on the edge */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-shrink: 0; /* Prevents stats from squishing */
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .correct-text { color: var(--accent-green); }
+        .incorrect-text { color: var(--accent-red); }
+
+        /* --- Question Area with Hanging Indent --- */
+        .question-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .q-number {
+            flex-shrink: 0;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        
+        .question-image { 
+            max-width: 100%; 
+            display: block; 
+            margin: 0 auto 24px auto; 
+        }
+        /* --- Options --- */
+        .option-btn {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            font-size: 16px;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .option-btn:hover:not(:disabled) {
+            border-color: #8b949e;
+            background-color: #1f242c;
+            transform: translateY(-2px);
+        }
+
+        .opt-letter {
+            font-weight: 600;
+            color: var(--text-muted);
+            width: 35px;
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+        .opt-text { flex-grow: 1; padding-top: 2px; }
+        .opt-icon { width: 24px; flex-shrink: 0; display: flex; justify-content: flex-end; }
+
+        /* --- Feedback States --- */
+        .option-btn.correct { border-color: var(--accent-green); background-color: var(--bg-green-muted); }
+        .option-btn.correct .opt-letter { color: var(--accent-green); }
+        
+        .option-btn.incorrect { border-color: var(--accent-red); background-color: var(--bg-red-muted); }
+        .option-btn.incorrect .opt-letter { color: var(--accent-red); }
+        
+        .option-btn.dimmed { opacity: 0.4; }
+        .option-btn:disabled { cursor: default; pointer-events: none; }
+
+        /* --- Navigation & Custom SVG Buttons --- */
+        .nav-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 1px solid var(--border-color);
+        }
+        button.nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        button.nav-btn:hover:not(:disabled) { background-color: #30363d; border-color: #8b949e; }
+        button.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* SVG Icon resets */
+        svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 600px) {
+            body {
+                padding: 20px 15px;
+            }
+            .toolbelt {
+                padding: 12px 15px;
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+            .question-header {
+                font-size: 16px; 
+                margin-bottom: 20px;
+            }
+            .option-btn {
+                font-size: 14px; 
+                padding: 12px 16px;
+            }
+            .opt-letter {
+                width: 25px;
+            }
+            .stats {
+                gap: 12px;
+            }
+            .stat-item {
+                font-size: 14px;
+            }
+            svg {
+                width: 16px;
+                height: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbelt">
+        <div class="progress-wrapper">
+    <div class="progress-text"><span id="q-current">1</span> / <span id="q-total">?</span></div>
+    <div class="progress-bar-bg" id="progress-bg"> <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+</div>
+        
+        <div class="stats">
+            <div class="stat-item correct-text">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span id="score-correct">0</span>
+            </div>
+            <div class="stat-item incorrect-text">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <span id="score-incorrect">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="exam-container"></div>
+
+    <div class="nav-buttons">
+        <button class="nav-btn" id="btn-prev" onclick="prevQuestion()">
+            <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back
+        </button>
+        <button class="nav-btn" id="btn-next" onclick="nextQuestion()">
+            Next
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
+    </div>
+
+    <script>
+        let originalExamData = []; 
+        let examData = [];         
+        let currentIndex = 0;
+        let userAnswers = {};
+        let stats = { correct: 0, incorrect: 0 };
+
+        // Clean SVG Strings for standard UI
+        const svgCheck = `<svg viewBox="0 0 24 24" style="color: var(--accent-green)"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        const svgX = `<svg viewBox="0 0 24 24" style="color: var(--accent-red)"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+        // --- SHUFFLE FUNCTION ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        fetch('exam_data.json', { cache: 'no-store' })
+            .then(response => response.json())
+            .then(data => {
+                originalExamData = data; // Keep a clean master copy for retakes
+
+                // 1. Check if the browser has a saved session
+                const savedState = localStorage.getItem('examSimulatorState');
+
+                if (savedState) {
+                    // 2. If a save exists, load it (restoring the exact shuffle order and progress)
+                    const state = JSON.parse(savedState);
+                    examData = state.examData;
+                    currentIndex = state.currentIndex;
+                    userAnswers = state.userAnswers;
+                    stats = state.stats;
+                } else {
+                    // 3. If no save exists (first load), start fresh and shuffle
+                    examData = [...originalExamData];
+                    shuffleArray(examData);
+                }
+                
+                document.getElementById('q-total').innerText = examData.length;
+                renderQuestion(); // This will render the UI and immediately auto-save
+            })
+            .catch(err => console.error(err));
+
+            // --- AUTO-SAVE LOGIC ---
+        function saveProgress() {
+            const state = {
+                examData: examData,
+                currentIndex: currentIndex,
+                userAnswers: userAnswers,
+                stats: stats
+            };
+            localStorage.setItem('examSimulatorState', JSON.stringify(state));
+        }
+
+        function renderQuestion() {
+            const container = document.getElementById('exam-container');
+            const q = examData[currentIndex];
+            const hasAnswered = userAnswers[currentIndex] !== undefined;
+            
+            document.getElementById('q-current').innerText = currentIndex + 1;
+            document.getElementById('score-correct').innerText = stats.correct;
+            document.getElementById('score-incorrect').innerText = stats.incorrect;
+            
+            const progressPct = ((currentIndex + 1) / examData.length) * 100;
+            document.getElementById('progress-fill').style.width = `${progressPct}%`;
+            
+            document.getElementById('btn-prev').disabled = (currentIndex === 0);
+            
+            const btnNext = document.getElementById('btn-next');
+            if (currentIndex === examData.length - 1) {
+                btnNext.innerHTML = `Finish Exam <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; margin-left: 6px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+            } else {
+                btnNext.innerHTML = `Next <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; margin-left: 4px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+            }
+            
+            let html = `
+            <div class="question-header">
+                <div class="q-number">${currentIndex + 1}.</div>
+                <div class="q-text">${q.question}</div>
+            </div>`;
+            
+            if (q.image) { html += `<img src="${q.image}" class="question-image">`; }
+
+            if (q.options) {
+                q.options.forEach((opt, index) => {
+                    let cssClass = "option-btn";
+                    let iconHtml = `<div class="opt-icon"></div>`;
+                    
+                    let match = opt.match(/^([A-D]\))\s*(.*)/);
+                    let letter = match ? match[1] : '';
+                    let text = match ? match[2] : opt;
+                    
+                    if (hasAnswered) {
+                        const isCorrect = opt.startsWith(q.answer);
+                        const isSelected = userAnswers[currentIndex] === opt;
+                        
+                        if (isCorrect) {
+                            cssClass += " correct";
+                            iconHtml = `<div class="opt-icon">${svgCheck}</div>`;
+                        } else if (isSelected && !isCorrect) {
+                            cssClass += " incorrect";
+                            iconHtml = `<div class="opt-icon">${svgX}</div>`;
+                        } else {
+                            cssClass += " dimmed";
+                        }
+                    }
+
+                    html += `
+                    <button class="${cssClass}" onclick="selectAnswer(${index})" ${hasAnswered ? 'disabled' : ''}>
+                        <div class="opt-letter">${letter}</div>
+                        <div class="opt-text">${text}</div>
+                        ${iconHtml}
+                    </button>`;
+                });
+            }
+
+            container.innerHTML = html;
+
+            if (window.renderMathInElement) {
+                renderMathInElement(container, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+            
+            saveProgress();
+        }
+
+        function selectAnswer(optIndex) {
+            const q = examData[currentIndex];
+            const selectedOpt = q.options[optIndex]; 
+            
+            userAnswers[currentIndex] = selectedOpt;
+            if (selectedOpt.startsWith(q.answer)) { stats.correct++; } else { stats.incorrect++; }
+            renderQuestion();
+            setTimeout(() => { document.querySelector('.nav-buttons').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 300);
+        }
+
+        function nextQuestion() {
+            if (currentIndex < examData.length - 1) { 
+                currentIndex++; 
+                renderQuestion(); 
+                window.scrollTo({top: 0, behavior: 'smooth'}); 
+            } else {
+                showResults(); 
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIndex > 0) { currentIndex--; renderQuestion(); window.scrollTo({top: 0, behavior: 'smooth'}); }
+        }
+
+        function showResults() {
+            const answeredCount = Object.keys(userAnswers).length;
+            const unansweredCount = examData.length - answeredCount;
+            const percentage = examData.length > 0 ? ((stats.correct / examData.length) * 100).toFixed(1) : 0;
+            const color = percentage >= 60 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+            // Hide the buttons AND the toolbelt
+            document.querySelector('.nav-buttons').style.display = 'none';
+            document.querySelector('.toolbelt').style.display = 'none';
+
+            const container = document.getElementById('exam-container');
+            container.innerHTML = `
+                <div style='text-align: center; padding: 50px 20px; background-color: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-color); margin-top: 10px;'>
+                    <h2 style='color: var(--text-main); margin-bottom: 10px; font-weight: 600;'>Exam Complete</h2>
+                    <h1 style='color: ${color}; font-size: 64px; font-weight: 700; margin: 0;'>${percentage}%</h1>
+                    <p style='color: var(--text-muted); font-size: 16px; margin-top: 5px; margin-bottom: 40px;'>Final Score</p>
+                    
+                    <div style='display: flex; justify-content: center; gap: 40px; margin-bottom: 50px;'>
+                        <div style='color: var(--accent-green); display: flex; flex-direction: column; align-items: center;'>
+                            <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; margin-bottom: 8px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <span style='font-size: 14px; margin-bottom: 4px;'>Correct</span>
+                            <b style='font-size: 24px;'>${stats.correct}</b>
+                        </div>
+                        <div style='color: var(--accent-red); display: flex; flex-direction: column; align-items: center;'>
+                            <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; margin-bottom: 8px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <span style='font-size: 14px; margin-bottom: 4px;'>Incorrect</span>
+                            <b style='font-size: 24px;'>${stats.incorrect}</b>
+                        </div>
+                        <div style='color: var(--text-muted); display: flex; flex-direction: column; align-items: center;'>
+                            <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; margin-bottom: 8px;"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            <span style='font-size: 14px; margin-bottom: 4px;'>Skipped</span>
+                            <b style='font-size: 24px;'>${unansweredCount}</b>
+                        </div>
+                    </div>
+
+                    <div style='display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;'>
+                        <button class="nav-btn" onclick="retakeExam(false)" style="background-color: var(--bg-green-muted); color: var(--accent-green); border-color: var(--accent-green); display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+                            Retake Entire Exam
+                        </button>
+                        ${(stats.incorrect > 0 || unansweredCount > 0) ? `
+                        <button class="nav-btn" onclick="retakeExam(true)" style="background-color: var(--bg-red-muted); color: var(--accent-red); border-color: var(--accent-red); display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            Retake Incorrect & Skipped
+                        </button>` : ''}
+                    </div>
+                </div>
+            `;
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function retakeExam(onlyIncorrect) {
+            if (onlyIncorrect) {
+                examData = examData.filter((q, index) => {
+                    const ans = userAnswers[index];
+                    if (!ans) return true; 
+                    return !ans.startsWith(q.answer); 
+                });
+                shuffleArray(examData); // Scatters the incorrect questions
+            } else {
+                examData = [...originalExamData];
+                shuffleArray(examData); // Scatters the entire 300-question exam again!
+            }
+
+            currentIndex = 0;
+            // ... (rest of the function stays the same)
+            userAnswers = {};
+            stats = { correct: 0, incorrect: 0 };
+            
+            // Bring the buttons and toolbelt back
+            document.querySelector('.nav-buttons').style.display = 'flex';
+            document.querySelector('.toolbelt').style.display = 'flex';
+            document.getElementById('q-total').innerText = examData.length;
+            
+            renderQuestion();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            
+        }
+        // --- INTERACTIVE PROGRESS BAR LOGIC ---
+        const progressBg = document.getElementById('progress-bg');
+        const progressFill = document.getElementById('progress-fill');
+        const qCurrentText = document.getElementById('q-current');
+        
+        let isDraggingProgress = false;
+        let dragIndex = 0; // Temporarily holds the index while dragging
+
+        function updateProgressUIOnly(e) {
+            if (!examData || examData.length === 0) return;
+
+            const rect = progressBg.getBoundingClientRect();
+            
+            // Get coordinates cleanly for both touch and mouse
+            let clientX = 0;
+            if (e.type.includes('mouse')) {
+                clientX = e.clientX;
+            } else if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+            } else {
+                return;
+            }
+
+            let clickX = clientX - rect.left;
+            clickX = Math.max(0, Math.min(clickX, rect.width));
+            
+            const percentage = clickX / rect.width;
+            dragIndex = Math.floor(percentage * examData.length);
+            if (dragIndex >= examData.length) dragIndex = examData.length - 1;
+
+            // 1. Remove CSS transition temporarily so the bar sticks instantly to the cursor
+            progressFill.style.transition = 'none';
+            // 2. Visually update the bar and text only (super fast)
+            progressFill.style.width = `${((dragIndex + 1) / examData.length) * 100}%`;
+            qCurrentText.innerText = dragIndex + 1;
+        }
+
+        function finalizeDrag() {
+            if (!isDraggingProgress) return;
+            isDraggingProgress = false;
+            
+            // Restore smooth CSS transition for normal Next/Back clicks
+            progressFill.style.transition = 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+            
+            // Actually render the heavy question DOM now that the user let go
+            if (currentIndex !== dragIndex) {
+                currentIndex = dragIndex;
+                renderQuestion();
+            } else {
+                // If they clicked the exact same spot, just re-render to reset transitions
+                renderQuestion();
+            }
+        }
+
+        // Mouse Events
+        progressBg.addEventListener('mousedown', (e) => {
+            isDraggingProgress = true;
+            updateProgressUIOnly(e);
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingProgress) updateProgressUIOnly(e);
+        });
+        window.addEventListener('mouseup', finalizeDrag);
+
+        // Touch Events
+        progressBg.addEventListener('touchstart', (e) => {
+            isDraggingProgress = true;
+            updateProgressUIOnly(e);
+        }, {passive: true});
+        window.addEventListener('touchmove', (e) => {
+            if (isDraggingProgress) updateProgressUIOnly(e);
+        }, {passive: true});
+        window.addEventListener('touchend', finalizeDrag);
+    </script>
+</body>
+</html>
